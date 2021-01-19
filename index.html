@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corona-Virus map</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/es6-promise@4.2.4/dist/es6-promise.auto.min.js"></script>
+<script src="https://unpkg.com/@mapbox/mapbox-sdk/umd/mapbox-sdk.min.js"></script>
+</head>
+<body>
+    <div id='map'></div>
+</body>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiYWRhcnNoMTk5OSIsImEiOiJja2syOHdlc3AweXplMm9xczUxOXcxczd6In0.oepE4Ol5rEImZJQp48Hy8A';
+        var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        zoom:1
+        });
+
+        
+        
+
+       function updateMap(){ 
+    fetch("https://opendata.ecdc.europa.eu/covid19/casedistribution/json")
+            .then(
+                response=>response.json()
+            )
+            .then( 
+                rsp=>{
+                    console.log("Tss")
+                    var v=[]
+                    let s=rsp.records;
+                    var l="",activeCase=0;
+                    rsp.records.forEach(element => {
+                        if(l!=element.countriesAndTerritories){
+                            v.push({"country":l,"cases":activeCase});
+                            activeCase=0;
+                            l=element.countriesAndTerritories;
+                        }
+                        else{
+                            activeCase+=element.cases_weekly;
+                        }
+                    });
+                   console.log(v);
+                   var mapboxClient = mapboxSdk({ accessToken: mapboxgl.accessToken });
+                   v.forEach((element)=>{
+                    mapboxClient.geocoding
+                    .forwardGeocode({
+                    query: element["country"],
+                    autocomplete: false,
+                    limit: 1
+                    })
+                    .send()
+                    .then(function (response) {
+                    if (
+                    response &&
+                    response.body &&
+                    response.body.features &&
+                    response.body.features.length
+                    ) {
+                    var feature = response.body.features[0];
+                    var popup = new mapboxgl.Popup({ offset: 25 }).setText(
+                        element["country"]+" with total cases of "+element["cases"]
+                    );
+
+                    new mapboxgl.Marker()
+                    .setLngLat(feature.center)
+                    .setPopup(popup) 
+                    .addTo(map)
+                    }
+                    });
+                   })
+                }
+
+            )
+       }
+       updateMap();
+
+       
+
+    </script>
+</html>
